@@ -1,0 +1,111 @@
+Here's the full plan for what needs to be built:
+
+---
+
+## Architecture Plan
+
+### Backend Changes
+
+**1. New `User` model** (separate from `Member` — these are staff/admins, not library members)
+```
+User {
+  name, email, password (bcrypt hashed),
+  role: "admin" | "librarian",
+  createdBy: ObjectId,  ← who added this user
+  isActive: boolean
+}
+```
+
+**2. New routes/controllers**
+```
+POST /api/auth/login        → returns JWT token
+POST /api/auth/logout
+GET  /api/auth/me           → get current user from token
+
+GET  /api/users             → admin only: list all staff users
+POST /api/users             → admin only: create new staff user
+PUT  /api/users/:id         → admin only: edit user
+DELETE /api/users/:id       → admin only: deactivate user
+```
+
+**3. Auth middleware**
+```ts
+// Two middleware functions:
+authenticate   → verifies JWT, attaches user to req
+authorizeAdmin → blocks non-admins (librarians can use app but can't manage users)
+```
+
+**4. Protect all existing routes** — wrap every route with `authenticate`
+
+---
+
+### Frontend Changes
+
+**5. Sign In page** (`/login`)
+- Email + password form
+- Stores JWT in `localStorage`
+- Redirects to Dashboard on success
+
+**6. Protected Route wrapper**
+```tsx
+// Redirects to /login if no token
+<ProtectedRoute> → wraps all existing pages
+```
+
+**7. New Users Management page** (`/users`) — admin only
+- Table of all staff accounts
+- Add new librarian/admin modal (admin only sees this)
+- Deactivate user button
+
+**8. Layout updates**
+- Show logged-in user's real name + role in sidebar footer
+- Logout button
+- Hide "Users" nav item for librarian role
+
+---
+
+### Role Permissions Summary
+
+| Action | Admin | Librarian |
+|---|---|---|
+| View dashboard, books, members, loans, fines | ✅ | ✅ |
+| Add/edit books, members, loans | ✅ | ✅ |
+| Manage fines (pay/waive) | ✅ | ✅ |
+| View users list | ✅ | ❌ |
+| Add/deactivate staff users | ✅ | ❌ |
+
+---
+
+### Packages needed
+
+**Backend:**
+```bash
+npm install bcryptjs jsonwebtoken
+npm install --save-dev @types/bcryptjs @types/jsonwebtoken
+```
+
+**Frontend:** nothing new — uses `fetch` + `localStorage`
+
+---
+
+### New files to create
+
+```
+backend/src/
+  models/User.ts           ← new
+  controllers/authController.ts   ← new
+  controllers/userController.ts   ← new
+  routes/auth.ts           ← new
+  routes/users.ts          ← new
+  middleware/auth.ts       ← new (JWT verify + role check)
+
+frontend/src/
+  pages/Login.tsx          ← new
+  pages/Users.tsx          ← new
+  context/AuthContext.tsx  ← new (global auth state)
+  components/ProtectedRoute.tsx  ← new
+```
+
+---
+
+Want me to go ahead and build all of this? I'll generate every file ready to drop in.

@@ -11,7 +11,7 @@ else
   echo "MongoDB already running."
 fi
 
-(cd backend && npm run dev) &
+(cd backend && npm run seed:admin 2>/dev/null; npm run dev) &
 BACKEND_PID=$!
 
 (cd frontend && npm run dev) &

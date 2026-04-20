@@ -1,12 +1,20 @@
-// In production, VITE_API_URL points to the deployed backend (e.g. https://libraryos-api.vercel.app).
-// In dev (or when the env var is absent), the Vite proxy forwards /api → localhost:5000.
 const BASE_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
   : "/api";
 
+const TOKEN_KEY = "libraryos_token";
+
+function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = getToken();
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...options,
   });
   const json = await res.json();

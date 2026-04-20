@@ -3,8 +3,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { requestLogger } from "./middleware/logger";
 import { notFound, errorHandler } from "./middleware/errorHandler";
+import { authenticate } from "./middleware/auth";
 
 // Routes
+import authRoutes from "./routes/auth";
+import userRoutes from "./routes/users";
 import bookRoutes from "./routes/books";
 import memberRoutes from "./routes/members";
 import loanRoutes from "./routes/loans";
@@ -19,7 +22,7 @@ const app = express();
 // ─── Middleware ────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL]
-  : ["http://localhost:5173"];
+  : ["http://localhost:5000", "http://localhost:5173"];
 
 app.use(
   cors({
@@ -41,13 +44,17 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// ─── API Routes ────────────────────────────────────────────────────────────────
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/books", bookRoutes);
-app.use("/api/members", memberRoutes);
-app.use("/api/loans", loanRoutes);
-app.use("/api/reservations", reservationRoutes);
-app.use("/api/fines", fineRoutes);
+// ─── Public Routes ─────────────────────────────────────────────────────────────
+app.use("/api/auth", authRoutes);
+
+// ─── Protected Routes ──────────────────────────────────────────────────────────
+app.use("/api/users", userRoutes);
+app.use("/api/dashboard", authenticate, dashboardRoutes);
+app.use("/api/books", authenticate, bookRoutes);
+app.use("/api/members", authenticate, memberRoutes);
+app.use("/api/loans", authenticate, loanRoutes);
+app.use("/api/reservations", authenticate, reservationRoutes);
+app.use("/api/fines", authenticate, fineRoutes);
 
 // ─── Error Handling ────────────────────────────────────────────────────────────
 app.use(notFound);

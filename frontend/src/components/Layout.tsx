@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   BookOpen,
@@ -11,10 +11,13 @@ import {
   ChevronRight,
   Menu,
   X,
+  LogOut,
+  UserCog,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { useAuth } from "../context/AuthContext";
 
-const navItems = [
+const baseNavItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/books", icon: BookOpen, label: "Books" },
   { to: "/members", icon: Users, label: "Members" },
@@ -23,8 +26,19 @@ const navItems = [
   { to: "/fines", icon: AlertCircle, label: "Fines" },
 ];
 
+const adminNavItem = { to: "/users", icon: UserCog, label: "Staff Users" };
+
 function Sidebar({ onClose }: { onClose?: () => void }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAdmin, logout } = useAuth();
+
+  const navItems = isAdmin ? [...baseNavItems, adminNavItem] : baseNavItems;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div className="w-64 flex-shrink-0 bg-slate-900 flex flex-col h-full">
@@ -71,16 +85,25 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         })}
       </nav>
 
-      {/* Footer */}
+      {/* Footer — logged in user + logout */}
       <div className="px-4 py-4 border-t border-white/10">
         <div className="flex items-center gap-3 px-2">
-          <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
-            <span className="text-indigo-400 text-xs font-bold">LB</span>
+          <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-indigo-400 text-xs font-bold">
+              {user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?"}
+            </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-slate-300 text-xs font-medium truncate">Librarian</p>
-            <p className="text-slate-500 text-xs truncate">admin@library.com</p>
+            <p className="text-slate-300 text-xs font-medium truncate">{user?.name || "—"}</p>
+            <p className="text-slate-500 text-xs truncate capitalize">{user?.role || ""}</p>
           </div>
+          <button
+            onClick={handleLogout}
+            title="Logout"
+            className="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/5 transition-colors flex-shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
@@ -89,6 +112,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -120,12 +144,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
               <Library className="w-4 h-4 text-white" />
             </div>
             <p className="text-white font-semibold text-sm">LibraryOS</p>
           </div>
+          <p className="text-slate-400 text-xs">{user?.name}</p>
         </div>
 
         <main className="flex-1 overflow-auto">
