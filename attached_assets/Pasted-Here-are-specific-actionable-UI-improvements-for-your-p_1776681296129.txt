@@ -1,0 +1,63 @@
+Here are specific, actionable UI improvements for your project:
+
+---
+
+### 1. 📱 Mobile Responsiveness — Sidebar has no mobile menu
+The sidebar is fixed at `w-64` and completely hidden on small screens. There's no hamburger menu. Add a collapsible drawer for mobile.
+
+### 2. 🏠 Empty State Design — Too plain
+```tsx
+// Current
+<p className="text-slate-400 text-sm">{message}</p>
+
+// Better — add icon + action button
+<div className="flex flex-col items-center gap-3">
+  <BookOpen className="w-10 h-10 text-slate-200" />
+  <p className="text-slate-400 text-sm font-medium">{message}</p>
+  <p className="text-slate-300 text-xs">Get started by adding your first entry</p>
+</div>
+```
+
+### 3. 📊 Dashboard Loading State — Just plain text
+Replace `"Loading dashboard..."` with skeleton cards (pulsing grey boxes) so the layout doesn't jump.
+
+### 4. 🔔 Toast Notifications — No feedback on actions
+When you mark a fine as paid, add a member, or return a book — there's no success/error feedback. Add a simple toast:
+```tsx
+// After handlePay / handleAdd success:
+<div className="fixed bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
+  ✓ Fine marked as paid
+</div>
+```
+
+### 5. 📋 Tables — No row count / pagination info
+Add a footer to tables: `Showing 10 of 47 results` — currently there's no way to know how many total records exist.
+
+### 6. 🎨 Sidebar — Active state could be more distinct
+The active nav item uses `bg-indigo-600` which is good, but the inactive hover `hover:bg-white/10` is very subtle. Try `hover:bg-slate-800` for better visibility.
+
+### 7. 🔍 Search — No debounce
+Every keystroke fires an API call. Add a 300ms debounce to the search inputs — it'll feel faster and reduce backend load.
+
+### 8. 📅 Date Columns — Inconsistent width
+Table date columns wrap awkwardly on smaller screens. Add `whitespace-nowrap` to `<Td>` for date cells.
+
+### 9. 🖨️ Modal Close Button — No X button
+The modal only closes by clicking the backdrop. Add an explicit ✕ button in the top-right corner of the modal header.
+
+### 10. ⚠️ Overdue Badge — Not prominent enough
+Overdue loans use `variant="danger"` badge which is small. Consider adding a pulsing red dot or row highlight:
+```tsx
+<tr className={cn("hover:bg-slate-50/50", loan.status === "overdue" && "bg-red-50/40")}>
+```
+
+---
+
+**Priority order I'd recommend:**
+1. Toast notifications (biggest UX impact, 30 min work)
+2. Mobile sidebar drawer
+3. Skeleton loading states
+4. Debounced search
+5. Empty state icons
+
+Want me to implement any of these?

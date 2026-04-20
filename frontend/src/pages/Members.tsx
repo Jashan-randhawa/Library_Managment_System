@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Search, User } from "lucide-react";
-import { PageHeader, Card, Badge, Button, Input, Select, Table, Th, Td, Modal, Empty } from "../components/ui";
+import { PageHeader, Card, Badge, Button, Input, Select, Table, Th, Td, TableFooter, Modal, Empty, SkeletonRows } from "../components/ui";
 import { membersApi } from "../lib/api";
-import { formatDate, formatCurrency } from "../lib/utils";
+import { formatDate, formatCurrency, useDebounce } from "../lib/utils";
+import { useToast } from "../components/Toast";
 
 interface Member { _id: string; name: string; email: string; phone: string; membershipType: string; joinDate: string; status: string; loansCount: number; finesOwed: number; }
 
@@ -12,6 +13,7 @@ const membershipBadge: Record<string, "default"|"success"|"neutral"> = { premium
 const statusBadge: Record<string, "success"|"danger"|"warning"> = { active: "success", suspended: "danger", expired: "warning" };
 
 export default function Members() {
+  const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -22,13 +24,15 @@ export default function Members() {
   const [error, setError] = useState("");
   const [newMember, setNewMember] = useState({ name: "", email: "", phone: "", membershipType: "standard" });
 
+  const debouncedSearch = useDebounce(search);
+
   const fetchMembers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await membersApi.getAll({ search, status, membershipType: membership });
+      const data = await membersApi.getAll({ search: debouncedSearch, status, membershipType: membership });
       setMembers(data as Member[]);
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  }, [search, status, membership]);
+  }, [debouncedSearch, status, membership]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
@@ -40,12 +44,13 @@ export default function Members() {
       setAddOpen(false);
       setNewMember({ name: "", email: "", phone: "", membershipType: "standard" });
       fetchMembers();
+      toast(`${newMember.name} added as a member`);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to add member"); }
     finally { setSaving(false); }
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader title="Members" subtitle={`${members.length} members registered`}
         action={<Button onClick={() => setAddOpen(true)}><Plus className="w-4 h-4" /> Add Member</Button>} />
 
@@ -72,31 +77,32 @@ export default function Members() {
       </Card>
 
       <Card>
-        {loading ? <div className="py-16 text-center text-slate-400 text-sm">Loading members...</div> : (
-          <Table>
-            <thead><tr className="bg-slate-50/70"><Th>Member</Th><Th>Phone</Th><Th>Membership</Th><Th>Joined</Th><Th>Loans</Th><Th>Fines Owed</Th><Th>Status</Th></tr></thead>
-            <tbody>
-              {members.length === 0 ? <tr><td colSpan={7}><Empty message="No members found" /></td></tr> :
-                members.map((m) => (
-                  <tr key={m._id} className="hover:bg-slate-50/50 transition-colors">
-                    <Td><div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-indigo-600 text-xs font-bold">{m.name.split(" ").map(n => n[0]).join("").slice(0,2)}</span>
-                      </div>
-                      <div><p className="font-medium text-slate-800">{m.name}</p><p className="text-xs text-slate-400">{m.email}</p></div>
-                    </div></Td>
-                    <Td>{m.phone}</Td>
-                    <Td><Badge variant={membershipBadge[m.membershipType]}>{m.membershipType}</Badge></Td>
-                    <Td>{formatDate(m.joinDate)}</Td>
-                    <Td>{m.loansCount}</Td>
-                    <Td>{m.finesOwed > 0 ? <span className="text-red-600 font-medium">{formatCurrency(m.finesOwed)}</span> : <span className="text-slate-400">—</span>}</Td>
-                    <Td><Badge variant={statusBadge[m.status]}>{m.status}</Badge></Td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </Table>
-        )}
+        <Table>
+          <thead><tr className="bg-slate-50/70"><Th>Member</Th><Th>Phone</Th><Th>Membership</Th><Th>Joined</Th><Th>Loans</Th><Th>Fines Owed</Th><Th>Status</Th></tr></thead>
+          <tbody>
+            {loading ? <SkeletonRows rows={5} cols={7} /> :
+              members.length === 0 ? (
+                <tr><td colSpan={7}><Empty message="No members found" hint="Try adjusting your filters or add a new member" /></td></tr>
+              ) : members.map((m) => (
+                <tr key={m._id} className="hover:bg-slate-50/50 transition-colors">
+                  <Td className="whitespace-normal"><div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-indigo-600 text-xs font-bold">{m.name.split(" ").map(n => n[0]).join("").slice(0,2)}</span>
+                    </div>
+                    <div><p className="font-medium text-slate-800 whitespace-nowrap">{m.name}</p><p className="text-xs text-slate-400">{m.email}</p></div>
+                  </div></Td>
+                  <Td>{m.phone}</Td>
+                  <Td><Badge variant={membershipBadge[m.membershipType]}>{m.membershipType}</Badge></Td>
+                  <Td>{formatDate(m.joinDate)}</Td>
+                  <Td>{m.loansCount}</Td>
+                  <Td>{m.finesOwed > 0 ? <span className="text-red-600 font-medium">{formatCurrency(m.finesOwed)}</span> : <span className="text-slate-400">—</span>}</Td>
+                  <Td><Badge variant={statusBadge[m.status]}>{m.status}</Badge></Td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </Table>
+        {!loading && <TableFooter total={members.length} />}
       </Card>
 
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setError(""); }} title="Add New Member">

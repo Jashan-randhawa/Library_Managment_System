@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Search, BookOpen } from "lucide-react";
-import { PageHeader, Card, Badge, Button, Input, Select, Table, Th, Td, Modal, Empty } from "../components/ui";
+import { PageHeader, Card, Badge, Button, Input, Select, Table, Th, Td, TableFooter, Modal, Empty, SkeletonRows } from "../components/ui";
 import { booksApi } from "../lib/api";
+import { useDebounce } from "../lib/utils";
+import { useToast } from "../components/Toast";
 
 interface Book { _id: string; title: string; author: string; isbn: string; genre: string; publishedYear: number; totalCopies: number; availableCopies: number; coverColor?: string; }
 
@@ -24,6 +26,7 @@ function BookCover({ book }: { book: Book }) {
 }
 
 export default function Books() {
+  const { toast } = useToast();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -33,14 +36,16 @@ export default function Books() {
   const [error, setError] = useState("");
   const [newBook, setNewBook] = useState({ title: "", author: "", isbn: "", genre: "Fiction", publishedYear: "2020", totalCopies: "3" });
 
+  const debouncedSearch = useDebounce(search);
+
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await booksApi.getAll({ search, genre });
+      const data = await booksApi.getAll({ search: debouncedSearch, genre });
       setBooks(data as Book[]);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [search, genre]);
+  }, [debouncedSearch, genre]);
 
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
 
@@ -53,12 +58,13 @@ export default function Books() {
       setAddOpen(false);
       setNewBook({ title: "", author: "", isbn: "", genre: "Fiction", publishedYear: "2020", totalCopies: "3" });
       fetchBooks();
+      toast(`"${newBook.title}" added to catalog`);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to add book"); }
     finally { setSaving(false); }
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader title="Books" subtitle={`${books.length} books in catalog`}
         action={<Button onClick={() => setAddOpen(true)}><Plus className="w-4 h-4" /> Add Book</Button>} />
 
@@ -74,30 +80,31 @@ export default function Books() {
       </Card>
 
       <Card>
-        {loading ? <div className="py-16 text-center text-slate-400 text-sm">Loading books...</div> : (
-          <Table>
-            <thead><tr className="bg-slate-50/70">
-              <Th>Book</Th><Th>ISBN</Th><Th>Genre</Th><Th>Year</Th><Th>Copies</Th><Th>Available</Th><Th>Status</Th>
-            </tr></thead>
-            <tbody>
-              {books.length === 0 ? <tr><td colSpan={7}><Empty message="No books found" /></td></tr> :
-                books.map((book) => (
-                  <tr key={book._id} className="hover:bg-slate-50/50 transition-colors">
-                    <Td><div className="flex items-center gap-3"><BookCover book={book} /><div><p className="font-medium text-slate-800">{book.title}</p><p className="text-xs text-slate-400">{book.author}</p></div></div></Td>
-                    <Td><span className="font-mono text-xs">{book.isbn}</span></Td>
-                    <Td><Badge variant="neutral">{book.genre}</Badge></Td>
-                    <Td>{book.publishedYear}</Td>
-                    <Td>{book.totalCopies}</Td>
-                    <Td>{book.availableCopies}</Td>
-                    <Td><Badge variant={book.availableCopies === 0 ? "danger" : book.availableCopies <= 1 ? "warning" : "success"}>
-                      {book.availableCopies === 0 ? "Out of Stock" : book.availableCopies <= 1 ? "Low Stock" : "Available"}
-                    </Badge></Td>
-                  </tr>
-                ))
-              }
-            </tbody>
-          </Table>
-        )}
+        <Table>
+          <thead><tr className="bg-slate-50/70">
+            <Th>Book</Th><Th>ISBN</Th><Th>Genre</Th><Th>Year</Th><Th>Copies</Th><Th>Available</Th><Th>Status</Th>
+          </tr></thead>
+          <tbody>
+            {loading ? <SkeletonRows rows={5} cols={7} /> :
+              books.length === 0 ? (
+                <tr><td colSpan={7}><Empty message="No books found" hint="Try adjusting your search or add a new book" /></td></tr>
+              ) : books.map((book) => (
+                <tr key={book._id} className="hover:bg-slate-50/50 transition-colors">
+                  <Td className="whitespace-normal"><div className="flex items-center gap-3"><BookCover book={book} /><div><p className="font-medium text-slate-800 whitespace-normal">{book.title}</p><p className="text-xs text-slate-400">{book.author}</p></div></div></Td>
+                  <Td><span className="font-mono text-xs">{book.isbn}</span></Td>
+                  <Td><Badge variant="neutral">{book.genre}</Badge></Td>
+                  <Td>{book.publishedYear}</Td>
+                  <Td>{book.totalCopies}</Td>
+                  <Td>{book.availableCopies}</Td>
+                  <Td><Badge variant={book.availableCopies === 0 ? "danger" : book.availableCopies <= 1 ? "warning" : "success"}>
+                    {book.availableCopies === 0 ? "Out of Stock" : book.availableCopies <= 1 ? "Low Stock" : "Available"}
+                  </Badge></Td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </Table>
+        {!loading && <TableFooter total={books.length} />}
       </Card>
 
       <Modal open={addOpen} onClose={() => { setAddOpen(false); setError(""); }} title="Add New Book">

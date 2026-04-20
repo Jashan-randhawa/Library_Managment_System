@@ -1,34 +1,42 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, BookMarked, CheckCircle, AlertTriangle } from "lucide-react";
-import { PageHeader, Card, Badge, Button, Select, Table, Th, Td, Empty } from "../components/ui";
+import { PageHeader, Card, Badge, Button, Select, Table, Th, Td, TableFooter, Empty, SkeletonRows } from "../components/ui";
 import { loansApi } from "../lib/api";
-import { formatDate, getDaysOverdue } from "../lib/utils";
+import { formatDate, getDaysOverdue, useDebounce, cn } from "../lib/utils";
+import { useToast } from "../components/Toast";
 
 interface Loan { _id: string; bookTitle: string; memberName: string; issueDate: string; dueDate: string; returnDate?: string; status: string; }
 const statusOptions = [{ value: "", label: "All Status" },{ value: "active", label: "Active" },{ value: "overdue", label: "Overdue" },{ value: "returned", label: "Returned" }];
 const statusBadge: Record<string, "info"|"danger"|"success"> = { active: "info", overdue: "danger", returned: "success" };
 
 export default function Loans() {
+  const { toast } = useToast();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
 
+  const debouncedSearch = useDebounce(search);
+
   const fetchLoans = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await loansApi.getAll({ search, status });
+      const data = await loansApi.getAll({ search: debouncedSearch, status });
       setLoans(data as Loan[]);
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  }, [search, status]);
+  }, [debouncedSearch, status]);
 
   useEffect(() => { fetchLoans(); }, [fetchLoans]);
 
-  const handleReturn = async (id: string) => {
+  const handleReturn = async (id: string, bookTitle: string) => {
     try {
       await loansApi.returnBook(id);
       fetchLoans();
-    } catch (e) { console.error(e); }
+      toast(`"${bookTitle}" marked as returned`);
+    } catch (e) {
+      console.error(e);
+      toast("Failed to update loan", "error");
+    }
   };
 
   const active = loans.filter(l => l.status === "active").length;
@@ -36,7 +44,7 @@ export default function Loans() {
   const returned = loans.filter(l => l.status === "returned").length;
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader title="Loans" subtitle={`${loans.length} total loans tracked`} />
 
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -63,38 +71,45 @@ export default function Loans() {
       </Card>
 
       <Card>
-        {loading ? <div className="py-16 text-center text-slate-400 text-sm">Loading loans...</div> : (
-          <Table>
-            <thead><tr className="bg-slate-50/70"><Th>Book</Th><Th>Member</Th><Th>Issue Date</Th><Th>Due Date</Th><Th>Return Date</Th><Th>Status</Th><Th>Action</Th></tr></thead>
-            <tbody>
-              {loans.length === 0 ? <tr><td colSpan={7}><Empty message="No loans found" /></td></tr> :
-                loans.map((loan) => {
-                  const daysOverdue = getDaysOverdue(loan.dueDate);
-                  return (
-                    <tr key={loan._id} className="hover:bg-slate-50/50 transition-colors">
-                      <Td><p className="font-medium text-slate-800">{loan.bookTitle}</p></Td>
-                      <Td><div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-indigo-600 text-xs font-bold">{loan.memberName[0]}</span>
-                        </div><span>{loan.memberName}</span>
-                      </div></Td>
-                      <Td>{formatDate(loan.issueDate)}</Td>
-                      <Td><span className={loan.status === "overdue" ? "text-red-600 font-medium" : ""}>{formatDate(loan.dueDate)}</span></Td>
-                      <Td>{loan.returnDate ? formatDate(loan.returnDate) : "—"}</Td>
-                      <Td><div className="flex flex-col gap-0.5">
-                        <Badge variant={statusBadge[loan.status]}>{loan.status}</Badge>
-                        {loan.status === "overdue" && daysOverdue > 0 && <span className="text-xs text-red-500">{daysOverdue}d overdue</span>}
-                      </div></Td>
-                      <Td>{loan.status !== "returned" && (
-                        <Button variant="ghost" className="text-xs px-2 py-1" onClick={() => handleReturn(loan._id)}>Mark Returned</Button>
-                      )}</Td>
-                    </tr>
-                  );
-                })
-              }
-            </tbody>
-          </Table>
-        )}
+        <Table>
+          <thead><tr className="bg-slate-50/70"><Th>Book</Th><Th>Member</Th><Th>Issue Date</Th><Th>Due Date</Th><Th>Return Date</Th><Th>Status</Th><Th>Action</Th></tr></thead>
+          <tbody>
+            {loading ? <SkeletonRows rows={5} cols={7} /> :
+              loans.length === 0 ? (
+                <tr><td colSpan={7}><Empty message="No loans found" hint="Try adjusting the status filter" /></td></tr>
+              ) : loans.map((loan) => {
+                const daysOverdue = getDaysOverdue(loan.dueDate);
+                const isOverdue = loan.status === "overdue";
+                return (
+                  <tr key={loan._id} className={cn("hover:bg-slate-50/50 transition-colors", isOverdue && "bg-red-50/40")}>
+                    <Td className="whitespace-normal"><p className="font-medium text-slate-800 whitespace-nowrap">{loan.bookTitle}</p></Td>
+                    <Td><div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-indigo-600 text-xs font-bold">{loan.memberName[0]}</span>
+                      </div><span>{loan.memberName}</span>
+                    </div></Td>
+                    <Td>{formatDate(loan.issueDate)}</Td>
+                    <Td><span className={isOverdue ? "text-red-600 font-medium" : ""}>{formatDate(loan.dueDate)}</span></Td>
+                    <Td>{loan.returnDate ? formatDate(loan.returnDate) : "—"}</Td>
+                    <Td><div className="flex flex-col gap-0.5">
+                      <Badge variant={statusBadge[loan.status]}>{loan.status}</Badge>
+                      {isOverdue && daysOverdue > 0 && (
+                        <span className="text-xs text-red-500 flex items-center gap-1">
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                          {daysOverdue}d overdue
+                        </span>
+                      )}
+                    </div></Td>
+                    <Td>{loan.status !== "returned" && (
+                      <Button variant="ghost" className="text-xs px-2 py-1" onClick={() => handleReturn(loan._id, loan.bookTitle)}>Mark Returned</Button>
+                    )}</Td>
+                  </tr>
+                );
+              })
+            }
+          </tbody>
+        </Table>
+        {!loading && <TableFooter total={loans.length} />}
       </Card>
     </div>
   );

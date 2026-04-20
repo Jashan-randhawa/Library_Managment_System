@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { BookOpen, Users, BookMarked, AlertCircle, TrendingUp, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from "recharts";
-import { StatCard, Card, PageHeader, Badge } from "../components/ui";
+import { StatCard, SkeletonStatCard, Skeleton, Card, PageHeader, Badge } from "../components/ui";
 import { dashboardApi } from "../lib/api";
 import { formatDate, formatCurrency } from "../lib/utils";
 
@@ -10,6 +10,32 @@ interface Loan { _id: string; bookTitle: string; memberName: string; dueDate: st
 interface Book { _id: string; title: string; availableCopies: number; }
 interface MonthData { month: string; loans: number; }
 interface GenreData { genre: string; count: number; }
+
+function DashboardSkeleton() {
+  return (
+    <div className="p-4 sm:p-8">
+      <div className="mb-6">
+        <Skeleton className="h-7 w-36 mb-2" />
+        <Skeleton className="h-4 w-56" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[0,1,2,3].map(i => <SkeletonStatCard key={i} />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <Card className="lg:col-span-2 p-5">
+          <Skeleton className="h-4 w-32 mb-1" />
+          <Skeleton className="h-3 w-20 mb-4" />
+          <Skeleton className="h-44 w-full" />
+        </Card>
+        <Card className="p-5">
+          <Skeleton className="h-4 w-24 mb-1" />
+          <Skeleton className="h-3 w-20 mb-4" />
+          <Skeleton className="h-44 w-full" />
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -35,10 +61,10 @@ export default function Dashboard() {
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="p-8 text-slate-400 text-sm">Loading dashboard...</div>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader title="Dashboard" subtitle={`Overview · ${new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -87,7 +113,9 @@ export default function Dashboard() {
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
           <div className="space-y-3">
-            {recentLoans.map((loan) => (
+            {recentLoans.length === 0 ? (
+              <p className="text-slate-400 text-sm text-center py-6">No recent loans</p>
+            ) : recentLoans.map((loan) => (
               <div key={loan._id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
@@ -115,7 +143,9 @@ export default function Dashboard() {
           <Card className="p-5">
             <p className="font-semibold text-slate-800 text-sm mb-3">Low Stock</p>
             <div className="space-y-2">
-              {lowStock.slice(0, 3).map((book) => (
+              {lowStock.length === 0 ? (
+                <p className="text-slate-400 text-xs text-center py-2">All books well stocked</p>
+              ) : lowStock.slice(0, 3).map((book) => (
                 <div key={book._id} className="flex items-center justify-between">
                   <p className="text-xs text-slate-600 truncate flex-1 mr-2">{book.title}</p>
                   <Badge variant={book.availableCopies === 0 ? "danger" : "warning"}>

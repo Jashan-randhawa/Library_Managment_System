@@ -1,3 +1,4 @@
+import { X, BookOpen } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 // Badge
@@ -149,9 +150,22 @@ export function Th({ children, className }: { children: React.ReactNode; classNa
 
 export function Td({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <td className={cn("px-4 py-3.5 text-slate-700 border-b border-slate-50", className)}>
+    <td className={cn("px-4 py-3.5 text-slate-700 border-b border-slate-50 whitespace-nowrap", className)}>
       {children}
     </td>
+  );
+}
+
+// Table footer showing row count
+export function TableFooter({ total, filtered }: { total: number; filtered?: number }) {
+  return (
+    <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 rounded-b-xl">
+      <p className="text-xs text-slate-400">
+        {filtered !== undefined && filtered !== total
+          ? `Showing ${filtered} of ${total} results`
+          : `${total} result${total !== 1 ? "s" : ""}`}
+      </p>
+    </div>
   );
 }
 
@@ -212,11 +226,55 @@ export function StatCard({
   );
 }
 
-// Empty state
-export function Empty({ message }: { message: string }) {
+// Skeleton loading block
+export function Skeleton({ className }: { className?: string }) {
   return (
-    <div className="py-16 text-center">
-      <p className="text-slate-400 text-sm">{message}</p>
+    <div className={cn("animate-pulse rounded-lg bg-slate-100", className)} />
+  );
+}
+
+// Skeleton stat card
+export function SkeletonStatCard() {
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <Skeleton className="h-3 w-24 mb-2" />
+          <Skeleton className="h-8 w-16 mb-2" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+        <Skeleton className="w-10 h-10 rounded-xl" />
+      </div>
+    </Card>
+  );
+}
+
+// Skeleton table rows
+export function SkeletonRows({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, i) => (
+        <tr key={i}>
+          {Array.from({ length: cols }).map((_, j) => (
+            <td key={j} className="px-4 py-3.5 border-b border-slate-50">
+              <Skeleton className={cn("h-4", j === 0 ? "w-32" : "w-20")} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+// Empty state
+export function Empty({ message, hint }: { message: string; hint?: string }) {
+  return (
+    <div className="py-16 text-center flex flex-col items-center gap-3">
+      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+        <BookOpen className="w-6 h-6 text-slate-300" />
+      </div>
+      <p className="text-slate-500 text-sm font-medium">{message}</p>
+      {hint && <p className="text-slate-400 text-xs">{hint}</p>}
     </div>
   );
 }
@@ -238,7 +296,15 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">{title}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
         {children}
       </div>
     </div>
