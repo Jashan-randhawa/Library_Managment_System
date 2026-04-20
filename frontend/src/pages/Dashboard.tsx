@@ -39,7 +39,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-8">
-      <PageHeader title="Dashboard" subtitle={`Overview · ${new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric"" })}`} />
+      <PageHeader title="Dashboard" subtitle={`Overview · ${new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard title="Total Books" value={stats?.totalBooks ?? 0} icon={BookOpen} color="indigo" trend={{ value: "in catalog", positive: true }} />
