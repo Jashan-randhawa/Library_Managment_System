@@ -3,11 +3,11 @@ import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { AuthRequest } from "../middleware/auth";
 
-const JWT_SECRET = process.env.JWT_SECRET || "libraryos-secret-key";
 const JWT_EXPIRES = "7d";
 
 function signToken(id: string): string {
-  return jwt.sign({ id }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+  const secret = process.env.JWT_SECRET || "libraryos-secret-key";
+  return jwt.sign({ id }, secret, { expiresIn: JWT_EXPIRES });
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
