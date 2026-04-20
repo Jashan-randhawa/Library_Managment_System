@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { Library, Eye, EyeOff, BookOpen, Users, BookMarked } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
