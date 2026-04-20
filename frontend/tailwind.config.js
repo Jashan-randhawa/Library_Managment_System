@@ -13,11 +13,20 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["'DM Sans'", "sans-serif"],
+        sans: ["'Inter'", "sans-serif"],
         display: ["'Playfair Display'", "serif"],
+      },
+      keyframes: {
+        "fade-in":    { from: { opacity: "0" } },
+        "zoom-in-95": { from: { opacity: "0", transform: "scale(.95)" } },
+        "slide-up":   { from: { opacity: "0", transform: "translateY(8px)" } },
+      },
+      animation: {
+        "in":           "fade-in 0.15s ease-out",
+        "zoom-in-95":   "zoom-in-95 0.15s ease-out",
+        "slide-up":     "slide-up 0.2s ease-out",
       },
     },
   },
   plugins: [],
 };
-
